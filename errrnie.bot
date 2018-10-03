@@ -1,0 +1,41 @@
+{
+  "name": "errrnie",
+  "padlock": "/J87gy4+XKwPUriQQvcLjA==!rHUrR68d6mTMPY9taOB0xgx3tETwTvJ9C78befrajp1NzTxfKUBdP9jQVN8Cba6C",
+  "version": "2.0",
+  "services": [
+    {
+      "tenantId": "cdf23a4e-f9eb-4e72-a750-0cf2dbd851a6",
+      "subscriptionId": "895b6d3a-951e-49cd-8ede-3b94719556e6",
+      "resourceGroup": "HackathonTeam4",
+      "serviceName": "errrnie",
+      "type": "abs",
+      "name": "errrnie",
+      "id": "1"
+    },
+    {
+      "connectionString": "PWIfHtOKeln0Ed2+ozgfTA==!rpcyaARbT7gi3kNFnmh0IxuuOUMmUYAHpzFXHgBeB4FPDAFwqZqeiOmFaI1apOftQHg8X1S/U95Zu94/n4N/TI7sATljLVPRarR9tKq5ko23guyudRGBXybOYhHvGkZI//22yGBR1nlZNC6Ubb7aUXlmXCdN3Q0MSXbCplDu+gWvkc3B9N5EwSYvJ7QYJJgEGbjRHlEw6AtERUszN6xQMA==",
+      "tenantId": "cdf23a4e-f9eb-4e72-a750-0cf2dbd851a6",
+      "subscriptionId": "895b6d3a-951e-49cd-8ede-3b94719556e6",
+      "resourceGroup": "HackathonTeam4",
+      "serviceName": "errrniea3ad",
+      "type": "blob",
+      "id": "2"
+    },
+    {
+      "appId": "",
+      "appPassword": "",
+      "endpoint": "http://localhost:3978/api/messages",
+      "type": "endpoint",
+      "name": "development",
+      "id": "3"
+    },
+    {
+      "appId": "5b84c11a-ae39-40cd-afce-2dd3046b5251",
+      "appPassword": "2Y3ugS/Af6JeMTLRSC9nrA==!LyF/tBkLWTfVeGzmAZF4HCSnAlDAkPlSzBVHQOpmHoM=",
+      "endpoint": "https://errrnie.azurewebsites.net/api/messages",
+      "type": "endpoint",
+      "name": "production",
+      "id": "4"
+    }
+  ]
+}
