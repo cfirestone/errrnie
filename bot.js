@@ -88,7 +88,8 @@ class EchoBot {
                 console.log('JSON(results): ', JSON.stringify(results));
                 const topIntent = LuisRecognizer.topIntent(results);
                 const confidence = results.luisResult.topScoringIntent.score;
-                await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }!`);
+                const entity = results.luisResult.entities[0]['entity'];
+                await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }, and the thing you're asking about is ${ entity }!`);
                 // return;
 
 
