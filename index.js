@@ -88,8 +88,31 @@ conversationState = new ConversationState(memoryStorage);
 // });
 // conversationState = new ConversationState(blobStorage);
 
+// // Make sure you add code to validate these fields
+// var luisAppId = ;
+// var luisAPIKey = "2b3e0e3dbbac4771b2ee92143d5fa112";
+// var luisAPIHostName = 'westus.api.cognitive.microsoft.com';
+
+
+// Map the contents to the required format for `LuisRecognizer`.
+const application = {
+    conversationState,
+    luisApiInfo: {
+        applicationId: "408a3db5-9f39-4ac5-aed7-9e487ea16864",
+        endpointKey: "2b3e0e3dbbac4771b2ee92143d5fa112",
+        azureRegion: "westus.api.cognitive.microsoft.com",
+    },
+    // Create configuration for LuisRecognizer's runtime behavior.
+};
+
+const luisPredictionOptions = {
+    includeAllIntents: true,
+    log: true,
+    staging: false,
+};
+
 // Create the main dialog.
-const bot = new EchoBot(conversationState);
+const bot = new EchoBot(application, luisPredictionOptions);
 
 // Create HTTP server
 let server = restify.createServer();
