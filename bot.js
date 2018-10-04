@@ -29,6 +29,7 @@ const LuisModelUrl = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/
 
 // dialogs
 const releaseCardDialog = require('./dialogs/releaseCard');
+const healthCardDialog = require('./dialogs/appHealthCard');
 
 class EchoBot {
     /**
@@ -104,9 +105,11 @@ class EchoBot {
                         await turnContext.sendActivity({attachments: [releaseCard]});
                         break;
                     case 'AppHealthy':
-                        const appHealth = await this.appHealth('https://google.com');
-                        const message = `Application is ${appHealth === 200 ? 'healthy' : 'unhealthy'}`;                        
-                        await turnContext.sendActivity(message);
+                        const versionData = await this.appHealth('https://rubberduckie-agile-panther.cfapps.io/version');
+                        const healthData = await this.appHealth('https://rubberduckie-agile-panther.cfapps.io/version');
+                        const HealthCard = healthCardDialog(versionData, healthData, appName[0]);
+                        const healthCard = CardFactory.adaptiveCard(HealthCard)
+                        await turnContext.sendActivity({attachments: [healthCard]});
                         break;
                     default:
                         await turnContext.sendActivity('Please try again.');
@@ -143,7 +146,7 @@ class EchoBot {
     async appHealth(site) {
         try {
             const response = await axios.get(site);
-            return response.status;
+            return response;//.status;
         } catch (err) {
             console.error('err', err.status);
         }
