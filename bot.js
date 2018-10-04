@@ -32,6 +32,7 @@ const LuisModelUrl = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/
 
 // dialogs
 const releaseCardDialog = require('./dialogs/releaseCard');
+const healthCardDialog = require('./dialogs/appHealthCard');
 const buildCardDialog = require('./dialogs/buildCard');
 
 class EchoBot {
@@ -106,10 +107,6 @@ class EchoBot {
                 const targetUrl = (env == 'development') ?
                     'https://rubberduckie-agile-panther.cfapps.io' :
                  'https://rubberduckie-busy-shark.cfapps.io';
-
-                console.log(env);
-                console.log(targetUrl);
-                console.log(`Matched intent '${topIntent}' with ${confidence}`);
                 switch (topIntent) {
                     case 'DeployAppToEnv':
                         const version = results.entities.appVersion || `latest` ;
@@ -123,9 +120,12 @@ class EchoBot {
                         await turnContext.sendActivity({attachments: [releaseCard]});
                         break;
                     case 'AppHealthy':
-                        const appHealth = await this.appHealth('https://google.com');
-                        const message = `Application is ${appHealth === 200 ? 'healthy' : 'unhealthy'}`;                        
-                        await turnContext.sendActivity(message);
+                        const applicationName = 'RubberDuckie';
+                        const versionHealthData = await this.appHealth(`${targetUrl}/version`);
+                        const healthData = await this.appHealth(`${targetUrl}/health`);                        
+                        const HealthCard = healthCardDialog(versionHealthData, healthData, applicationName);
+                        const healthCard = CardFactory.adaptiveCard(HealthCard);
+                        await turnContext.sendActivity({attachments: [healthCard]});
                         break;
                     case 'LatestBuildMetrics':
                         const buildData = await this.retrieveBuildMetrics(appName);
@@ -230,7 +230,7 @@ class EchoBot {
     async appHealth(site) {
         try {
             const response = await axios.get(site);
-            return response.status;
+            return response;//.status;
         } catch (err) {
             console.error('err', err.status);
         }
