@@ -3,7 +3,7 @@
 
 // bot.js is your bot's main entry point to handle incoming activities.
 
-const { ActivityTypes,  } = require('botbuilder');
+const { ActivityTypes, CardFactory } = require('botbuilder');
 const { TextPrompt, DialogSet, WaterfallDialog } = require('botbuilder-dialogs');
 const { LuisRecognizer } = require('botbuilder-ai');
 const GitHub = require('github-api');
@@ -26,6 +26,9 @@ var luisAPIKey = "6351789663af46dfa7985bbd59a0f421";
 var luisAPIHostName = 'westus.api.cognitive.microsoft.com';
 
 const LuisModelUrl = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/408a3db5-9f39-4ac5-aed7-9e487ea16864?subscription-key=6351789663af46dfa7985bbd59a0f421";
+
+// dialogs
+const releaseCardDialog = require('./dialogs/releaseCard');
 
 class EchoBot {
     /**
@@ -96,10 +99,9 @@ class EchoBot {
                 switch (topIntent) {
                     case 'Latest_Release':
                         const releaseData = await this.retrieveLatestGithubRelease(appName);
-                        // console.dir(releaseData);
-                        await turnContext.sendActivity(`The latest release for ${appName} is '${releaseData.name}', created by ${releaseData.author.login} on ${releaseData.created_at}`);
-                        // await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }!`);
-                        // return;
+                        const ReleaseCard = releaseCardDialog(releaseData);
+                        const releaseCard = CardFactory.adaptiveCard(ReleaseCard)
+                        await turnContext.sendActivity({attachments: [releaseCard]});
                         break;
                     case 'AppHealthy':
                         const appHealth = await this.appHealth('https://google.com');
@@ -111,10 +113,7 @@ class EchoBot {
                 }
 
                 // const entity = results.luisResult.entities[0]['entity'];
-                //await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }, and the thing you're asking about is ${ entity }!`);
-                
-                
-
+                //await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }, and the thing you're asking about is ${ entity }!`)
 
                 // await turnContext.sendActivity(`${ count }: You said "${ turnContext.activity.text }! Good job! Now you're watching index.js!"`);
                 // // increment and set turn counter.
