@@ -99,10 +99,12 @@ class EchoBot {
                 const topIntent = LuisRecognizer.topIntent(results);
                 const confidence = results.luisResult.topScoringIntent.score;
                 const appName = results.entities.appName;
+                const env = results.entities.environment;
+                console.log(env);
                 console.log(`Matched intent '${topIntent}' with ${confidence}`);
                 switch (topIntent) {
                     case 'DeployAppToEnv':
-                        const env = results.entities.environment;
+                        
                         const version = results.entities.appVersion || `latest` ;
                         await turnContext.sendActivity(`Attempting to deploy ${appName}@${version} to ${env}...`)
                         const deployData = await this.triggerDeploy(appName, version, env);
@@ -124,6 +126,10 @@ class EchoBot {
                         const buildCard = CardFactory.adaptiveCard(BuildCard);
                         await turnContext.sendActivity({attachments: [buildCard]})
                         break;
+                    case 'AppVersion':
+                        const versionData = await this.retrieveRunningAppVersion(appName, env);
+                        await turnContext.sendActivity(`${appName} is running ${versionData.version} at ${versionData.runningUrl}`);
+                        break;
                     default:
                         await turnContext.sendActivity('Please try again.');
                 }
@@ -141,6 +147,23 @@ class EchoBot {
         }
         // Save state changes
         await this.conversationState.saveChanges(turnContext);
+    }
+
+    async retrieveRunningAppVersion(appName, environment) {
+        environment  = (environment == 'dev' || environment == 'development' || environment == 'develop' ) ?
+            'development' : 'production';
+        
+        const runningUrl = (environment === 'development') ?
+            'https://rubberduckie-agile-panther.cfapps.io/version' :
+            'https://rubberduckie-busy-shark.cfapps.io/version';
+        console.log(environment, runningUrl);
+        const versionResponse = await axios.get(runningUrl);
+        console.log(versionResponse.data);
+        return {
+            version: versionResponse.data,
+            runningUrl
+        }
+
     }
 
     async triggerDeploy(appName, version, environment){
