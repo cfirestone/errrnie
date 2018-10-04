@@ -181,8 +181,6 @@ class EchoBot {
                     }
                 }
             };
-            console.log(JSON.stringify(body));
-            console.log(TRAVIS_TOKEN);
             const triggerDeployResponse = await axios({
                 method: 'post',
                 url,
