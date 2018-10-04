@@ -7,6 +7,7 @@ const { ActivityTypes, CardFactory } = require('botbuilder');
 const { TextPrompt, DialogSet, WaterfallDialog } = require('botbuilder-dialogs');
 const { LuisRecognizer } = require('botbuilder-ai');
 const GitHub = require('github-api');
+const axios = require('axios');
 
 // Turn counter property
 const TURN_COUNTER_PROPERTY = 'turnCounterProperty';
@@ -93,22 +94,26 @@ class EchoBot {
                 // console.dir(results);
                 const topIntent = LuisRecognizer.topIntent(results);
                 const confidence = results.luisResult.topScoringIntent.score;
+                const appName = results.entities.appName;
+
+                switch (topIntent) {
+                    case 'Latest_Release':
+                        const releaseData = await this.retrieveLatestGithubRelease(appName);
+                        const ReleaseCard = releaseCardDialog(releaseData);
+                        const releaseCard = CardFactory.adaptiveCard(ReleaseCard)
+                        await turnContext.sendActivity({attachments: [releaseCard]});
+                        break;
+                    case 'AppHealthy':
+                        const appHealth = await this.appHealth('https://google.com');
+                        const message = `Application is ${appHealth === 200 ? 'healthy' : 'unhealthy'}`;                        
+                        await turnContext.sendActivity(message);
+                        break;
+                    default:
+                        await turnContext.sendActivity('Please try again.');
+                }
 
                 // const entity = results.luisResult.entities[0]['entity'];
-                //await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }, and the thing you're asking about is ${ entity }!`);
-
-                const appName = results.entities.appName;
-                const releaseData = await this.retrieveLatestGithubRelease(appName);
-                // console.dir(releaseData);
-                await turnContext.sendActivity(`The latest release for ${appName} is '${releaseData.name}', created by ${releaseData.author.login} on ${releaseData.created_at}`);
-                // await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }!`);
-                // return;
-
-                const ReleaseCard = releaseCardDialog(releaseData);
-                const releaseCard = CardFactory.adaptiveCard(ReleaseCard)
-                await turnContext.sendActivity({attachments: [releaseCard]});
-                
-
+                //await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }, and the thing you're asking about is ${ entity }!`)
 
                 // await turnContext.sendActivity(`${ count }: You said "${ turnContext.activity.text }! Good job! Now you're watching index.js!"`);
                 // // increment and set turn counter.
@@ -133,6 +138,15 @@ class EchoBot {
             throw new Error(`No releases found for ${repositoryName}`)
         }
         return releases.data[0];
+    }
+
+    async appHealth(site) {
+        try {
+            const response = await axios.get(site);
+            return response.status;
+        } catch (err) {
+            console.error('err', err.status);
+        }
     }
 }
 
