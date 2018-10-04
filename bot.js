@@ -25,11 +25,15 @@ var luisAppId = "408a3db5-9f39-4ac5-aed7-9e487ea16864";
 var luisAPIKey = "6351789663af46dfa7985bbd59a0f421";
 var luisAPIHostName = 'westus.api.cognitive.microsoft.com';
 
+const TRAVIS_TOKEN = 'T0g0ZMZFvBTTY-MXCEUdJA';
+
+
 const LuisModelUrl = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/408a3db5-9f39-4ac5-aed7-9e487ea16864?subscription-key=6351789663af46dfa7985bbd59a0f421";
 
 // dialogs
 const releaseCardDialog = require('./dialogs/releaseCard');
 const healthCardDialog = require('./dialogs/appHealthCard');
+const buildCardDialog = require('./dialogs/buildCard');
 
 class EchoBot {
     /**
@@ -96,8 +100,14 @@ class EchoBot {
                 const topIntent = LuisRecognizer.topIntent(results);
                 const confidence = results.luisResult.topScoringIntent.score;
                 const appName = results.entities.appName;
-
+                console.log(`Matched intent '${topIntent}' with ${confidence}`);
+                const env = results.entities.environment;
                 switch (topIntent) {
+                    case 'DeployAppToEnv':                        
+                        const version = results.entities.appVersion || `latest` ;
+                        await turnContext.sendActivity(`Attempting to deploy ${appName}@${version} to ${env}...`)
+                        const deployData = await this.triggerDeploy(appName, version, env);
+                        break;
                     case 'Latest_Release':
                         const releaseData = await this.retrieveLatestGithubRelease(appName);
                         const ReleaseCard = releaseCardDialog(releaseData);
@@ -105,11 +115,23 @@ class EchoBot {
                         await turnContext.sendActivity({attachments: [releaseCard]});
                         break;
                     case 'AppHealthy':
-                        const versionData = await this.appHealth('https://rubberduckie-agile-panther.cfapps.io/version');
-                        const healthData = await this.appHealth('https://rubberduckie-agile-panther.cfapps.io/version');
+                        console.log('env', env)
+                        const runningUrl = (env == 'dev' || env == 'development' || env == 'develop') ?
+                            'https://rubberduckie-agile-panther.cfapps.io' :
+                            'https://rubberduckie-busy-shark.cfapps.io';
+                        const versionData = await this.appHealth(`${runningUrl}/version`);
+                        const healthData = await this.appHealth(`${runningUrl}/health`);
+                        console.log('runningurl', runningUrl)
+                        // console.log()
                         const HealthCard = healthCardDialog(versionData, healthData, appName[0]);
                         const healthCard = CardFactory.adaptiveCard(HealthCard)
                         await turnContext.sendActivity({attachments: [healthCard]});
+                        break;
+                    case 'LatestBuildMetrics':
+                        const buildData = await this.retrieveBuildMetrics(appName);
+                        const BuildCard = buildCardDialog(buildData);
+                        const buildCard = CardFactory.adaptiveCard(BuildCard);
+                        await turnContext.sendActivity({attachments: [buildCard]})
                         break;
                     default:
                         await turnContext.sendActivity('Please try again.');
@@ -130,6 +152,51 @@ class EchoBot {
         await this.conversationState.saveChanges(turnContext);
     }
 
+    async triggerDeploy(appName, version, environment){
+        appName = 'RubberDuckie'
+        try {
+            const url = `https://api.travis-ci.org/repo/firestones%2F${appName}/requests`;
+            const body = {
+                request: {
+                    message: 'Deploy triggered by chat',
+                    config: {
+                        merge_mode: 'deep_merge',
+                        deploy: {
+                            space: `${environment}`
+                        }
+                    }
+                }
+            };
+            console.log(JSON.stringify(body));
+            console.log(TRAVIS_TOKEN);
+            const triggerDeployResponse = await axios({
+                method: 'post',
+                url,
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'Travis-API-Version': 3,
+                    Authorization: `token ${TRAVIS_TOKEN}`
+                },
+                body
+            })
+        } catch (err) {
+            console.log(`Error when triggering deploy build:`, err.message);
+        }
+
+    }
+
+    async retrieveBuildMetrics(appName){
+        try{
+            appName = 'RubberDuckie';
+            const listBuildsResponse = await axios.get(`https://api.travis-ci.org/repos/firestones/${appName}/builds`);
+            const latestBuildNumber = listBuildsResponse.data[0].id;
+            const latestBuildResponse = await axios.get(`https://api.travis-ci.org/repos/firestones/${appName}/builds/${latestBuildNumber}`);
+            return latestBuildResponse.data;
+        } catch (err) {
+            console.log('error getting build metrics', err);
+        }
+    }
     async retrieveLatestGithubRelease(repositoryName) {
         const owner = 'firestones';
         const gh = new GitHub();

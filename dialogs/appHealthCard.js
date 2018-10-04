@@ -1,7 +1,7 @@
 // http://adaptivecards.io/samples/ActivityUpdate.html
 // https://docs.microsoft.com/en-us/adaptive-cards/authoring-cards/card-schema
 
-module.exports = (versionData, healthData, appName) => ({ 
+module.exports = (versionData = {}, healthData = {}, appName) => ({ 
     $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
     type: "AdaptiveCard",
     version: "1.0",
@@ -36,7 +36,7 @@ module.exports = (versionData, healthData, appName) => ({
                                 },
                                 { 
                                     type: "TextBlock",
-                                    text: versionData.data ? `Release ${healthData.data}` : '',
+                                    text: versionData.data ? `Release ${versionData.data}` : '',
                                     isSubtle: true
                                 }
                             ]
