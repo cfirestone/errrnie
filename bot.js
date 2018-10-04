@@ -146,9 +146,20 @@ class EchoBot {
     async triggerDeploy(appName, version, environment){
         appName = 'RubberDuckie'
         try {
-            const url = `https://api.travis-ci.org/repo/firestones/${appName}/requests`;
-            console.log(url);
-            console.log(typeof url);
+            const url = `https://api.travis-ci.org/repo/firestones%2F${appName}/requests`;
+            const body = {
+                request: {
+                    message: 'Deploy triggered by chat',
+                    config: {
+                        merge_mode: 'deep_merge',
+                        deploy: {
+                            space: `${environment}`
+                        }
+                    }
+                }
+            };
+            console.log(JSON.stringify(body));
+            console.log(TRAVIS_TOKEN);
             const triggerDeployResponse = await axios({
                 method: 'post',
                 url,
@@ -156,20 +167,12 @@ class EchoBot {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
                     'Travis-API-Version': 3,
-                    Authorization: `token: ${TRAVIS_TOKEN}`
+                    Authorization: `token ${TRAVIS_TOKEN}`
                 },
-                body: {
-                    request: {
-                        message: 'Deploy triggered by chat',
-                        merge_mode: 'deep_merge',
-                        config: {
-                            space: `${environment}`
-                        }
-                    }
-                }
+                body
             })
         } catch (err) {
-            console.log(`Error when triggering deploy build`, err.message);
+            console.log(`Error when triggering deploy build:`, err.message);
         }
 
     }
