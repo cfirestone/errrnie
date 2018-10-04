@@ -149,7 +149,7 @@ class EchoBot {
             const url = `https://api.travis-ci.org/repo/firestones/${appName}/requests`;
             console.log(url);
             console.log(typeof url);
-            const triggerDeployResponse = await axios.post({
+            const triggerDeployResponse = await axios({
                 method: 'post',
                 url,
                 headers: {
