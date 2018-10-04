@@ -107,7 +107,7 @@ class EchoBot {
                         await turnContext.sendActivity(message);
                         break;
                     default:
-                        console.log('placeholder');
+                        await turnContext.sendActivity('Please try again.');
                 }
 
                 // const entity = results.luisResult.entities[0]['entity'];
