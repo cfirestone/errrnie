@@ -99,10 +99,19 @@ class EchoBot {
                 const topIntent = LuisRecognizer.topIntent(results);
                 const confidence = results.luisResult.topScoringIntent.score;
                 const appName = results.entities.appName;
+                let env = results.entities.environment;
+                env  = (env == 'dev' || env == 'development' || env == 'develop' ) ?
+                    'development' : 'production';
+        
+                const targetUrl = (env == 'development') ?
+                    'https://rubberduckie-agile-panther.cfapps.io' :
+                 'https://rubberduckie-busy-shark.cfapps.io';
+
+                console.log(env);
+                console.log(targetUrl);
                 console.log(`Matched intent '${topIntent}' with ${confidence}`);
                 switch (topIntent) {
                     case 'DeployAppToEnv':
-                        const env = results.entities.environment;
                         const version = results.entities.appVersion || `latest` ;
                         await turnContext.sendActivity(`Attempting to deploy ${appName}@${version} to ${env}...`)
                         const deployData = await this.triggerDeploy(appName, version, env);
@@ -124,6 +133,10 @@ class EchoBot {
                         const buildCard = CardFactory.adaptiveCard(BuildCard);
                         await turnContext.sendActivity({attachments: [buildCard]})
                         break;
+                    case 'AppVersion':
+                        const versionData = await this.retrieveRunningAppVersion(appName, env, targetUrl);
+                        await turnContext.sendActivity(`${appName} is running ${versionData.version} at ${versionData.runningUrl}`);
+                        break;
                     default:
                         await turnContext.sendActivity('Please try again.');
                 }
@@ -143,6 +156,21 @@ class EchoBot {
         await this.conversationState.saveChanges(turnContext);
     }
 
+    async retrieveRunningAppVersion(appName, environment, targetUrl) {
+        environment  = (environment == 'dev' || environment == 'development' || environment == 'develop' ) ?
+            'development' : 'production';
+        
+        const runningUrl = `${targetUrl}/version`;
+        console.log(environment, runningUrl);
+        const versionResponse = await axios.get(runningUrl);
+        console.log(versionResponse.data);
+        return {
+            version: versionResponse.data,
+            runningUrl
+        }
+
+    }
+
     async triggerDeploy(appName, version, environment){
         appName = 'RubberDuckie'
         try {
@@ -158,8 +186,6 @@ class EchoBot {
                     }
                 }
             };
-            console.log(JSON.stringify(body));
-            console.log(TRAVIS_TOKEN);
             const triggerDeployResponse = await axios({
                 method: 'post',
                 url,
