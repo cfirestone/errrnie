@@ -6,6 +6,7 @@
 const { ActivityTypes,  } = require('botbuilder');
 const { TextPrompt, DialogSet, WaterfallDialog } = require('botbuilder-dialogs');
 const { LuisRecognizer } = require('botbuilder-ai');
+const GitHub = require('github-api');
 
 // Turn counter property
 const TURN_COUNTER_PROPERTY = 'turnCounterProperty';
@@ -85,12 +86,21 @@ class EchoBot {
                 count = count === undefined ? 1 : ++count;
 
                 const results = await this.luisRecognizer.recognize(turnContext);
-                console.log('JSON(results): ', JSON.stringify(results));
+                // console.log('JSON(results): ', JSON.stringify(results));
+                // console.dir(results);
                 const topIntent = LuisRecognizer.topIntent(results);
                 const confidence = results.luisResult.topScoringIntent.score;
-                const entity = results.luisResult.entities[0]['entity'];
-                await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }, and the thing you're asking about is ${ entity }!`);
+
+                // const entity = results.luisResult.entities[0]['entity'];
+                //await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }, and the thing you're asking about is ${ entity }!`);
+
+                const appName = results.entities.appName;
+                const releaseData = await this.retrieveLatestGithubRelease(appName);
+                // console.dir(releaseData);
+                await turnContext.sendActivity(`The latest release for ${appName} is '${releaseData.name}', created by ${releaseData.author.login} on ${releaseData.created_at}`);
+                // await turnContext.sendActivity(`Dunno, but I'm ${Math.floor(confidence * 100)}% sure your intent is ${ topIntent }!`);
                 // return;
+                
 
 
                 // await turnContext.sendActivity(`${ count }: You said "${ turnContext.activity.text }! Good job! Now you're watching index.js!"`);
@@ -103,6 +113,19 @@ class EchoBot {
         }
         // Save state changes
         await this.conversationState.saveChanges(turnContext);
+    }
+
+    async retrieveLatestGithubRelease(repositoryName) {
+        const owner = 'firestones';
+        const gh = new GitHub();
+        const repository = await gh.getRepo(owner, repositoryName);
+        const releases = await repository.listReleases();
+        //even though there's an endpoint in the API, there isn't one in the npm package
+        // so we grab the 0th element of the list
+        if(!releases.data || releases.data.length == 0) {
+            throw new Error(`No releases found for ${repositoryName}`)
+        }
+        return releases.data[0];
     }
 }
 
