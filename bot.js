@@ -100,10 +100,15 @@ class EchoBot {
                 const topIntent = LuisRecognizer.topIntent(results);
                 const confidence = results.luisResult.topScoringIntent.score;
                 const appName = results.entities.appName;
-                console.log(`Matched intent '${topIntent}' with ${confidence}`);
-                const env = results.entities.environment;
+                let env = results.entities.environment;
+                env  = (env == 'dev' || env == 'development' || env == 'develop' ) ?
+                    'development' : 'production';
+        
+                const targetUrl = (env == 'development') ?
+                    'https://rubberduckie-agile-panther.cfapps.io' :
+                 'https://rubberduckie-busy-shark.cfapps.io';
                 switch (topIntent) {
-                    case 'DeployAppToEnv':                        
+                    case 'DeployAppToEnv':
                         const version = results.entities.appVersion || `latest` ;
                         await turnContext.sendActivity(`Attempting to deploy ${appName}@${version} to ${env}...`)
                         const deployData = await this.triggerDeploy(appName, version, env);
@@ -115,16 +120,11 @@ class EchoBot {
                         await turnContext.sendActivity({attachments: [releaseCard]});
                         break;
                     case 'AppHealthy':
-                        console.log('env', env)
-                        const runningUrl = (env == 'dev' || env == 'development' || env == 'develop') ?
-                            'https://rubberduckie-agile-panther.cfapps.io' :
-                            'https://rubberduckie-busy-shark.cfapps.io';
-                        const versionData = await this.appHealth(`${runningUrl}/version`);
-                        const healthData = await this.appHealth(`${runningUrl}/health`);
-                        console.log('runningurl', runningUrl)
-                        // console.log()
-                        const HealthCard = healthCardDialog(versionData, healthData, appName[0]);
-                        const healthCard = CardFactory.adaptiveCard(HealthCard)
+                        const applicationName = 'RubberDuckie';
+                        const versionHealthData = await this.appHealth(`${targetUrl}/version`);
+                        const healthData = await this.appHealth(`${targetUrl}/health`);                        
+                        const HealthCard = healthCardDialog(versionHealthData, healthData, applicationName);
+                        const healthCard = CardFactory.adaptiveCard(HealthCard);
                         await turnContext.sendActivity({attachments: [healthCard]});
                         break;
                     case 'LatestBuildMetrics':
@@ -132,6 +132,10 @@ class EchoBot {
                         const BuildCard = buildCardDialog(buildData);
                         const buildCard = CardFactory.adaptiveCard(BuildCard);
                         await turnContext.sendActivity({attachments: [buildCard]})
+                        break;
+                    case 'AppVersion':
+                        const versionData = await this.retrieveRunningAppVersion(appName, env, targetUrl);
+                        await turnContext.sendActivity(`${appName} is running ${versionData.version} at ${versionData.runningUrl}`);
                         break;
                     default:
                         await turnContext.sendActivity('Please try again.');
@@ -152,6 +156,21 @@ class EchoBot {
         await this.conversationState.saveChanges(turnContext);
     }
 
+    async retrieveRunningAppVersion(appName, environment, targetUrl) {
+        environment  = (environment == 'dev' || environment == 'development' || environment == 'develop' ) ?
+            'development' : 'production';
+        
+        const runningUrl = `${targetUrl}/version`;
+        console.log(environment, runningUrl);
+        const versionResponse = await axios.get(runningUrl);
+        console.log(versionResponse.data);
+        return {
+            version: versionResponse.data,
+            runningUrl
+        }
+
+    }
+
     async triggerDeploy(appName, version, environment){
         appName = 'RubberDuckie'
         try {
@@ -167,8 +186,6 @@ class EchoBot {
                     }
                 }
             };
-            console.log(JSON.stringify(body));
-            console.log(TRAVIS_TOKEN);
             const triggerDeployResponse = await axios({
                 method: 'post',
                 url,
