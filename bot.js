@@ -25,6 +25,9 @@ var luisAppId = "408a3db5-9f39-4ac5-aed7-9e487ea16864";
 var luisAPIKey = "6351789663af46dfa7985bbd59a0f421";
 var luisAPIHostName = 'westus.api.cognitive.microsoft.com';
 
+const TRAVIS_TOKEN = 'T0g0ZMZFvBTTY-MXCEUdJA';
+
+
 const LuisModelUrl = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/408a3db5-9f39-4ac5-aed7-9e487ea16864?subscription-key=6351789663af46dfa7985bbd59a0f421";
 
 // dialogs
@@ -98,6 +101,12 @@ class EchoBot {
                 const appName = results.entities.appName;
                 console.log(`Matched intent '${topIntent}' with ${confidence}`);
                 switch (topIntent) {
+                    case 'DeployAppToEnv':
+                        const env = results.entities.environment;
+                        const version = results.entities.appVersion || `latest` ;
+                        await turnContext.sendActivity(`Attempting to deploy ${appName}@${version} to ${env}...`)
+                        const deployData = await this.triggerDeploy(appName, version, env);
+                        break;
                     case 'Latest_Release':
                         const releaseData = await this.retrieveLatestGithubRelease(appName);
                         const ReleaseCard = releaseCardDialog(releaseData);
@@ -132,6 +141,40 @@ class EchoBot {
         }
         // Save state changes
         await this.conversationState.saveChanges(turnContext);
+    }
+
+    async triggerDeploy(appName, version, environment){
+        appName = 'RubberDuckie'
+        try {
+            const url = `https://api.travis-ci.org/repo/firestones%2F${appName}/requests`;
+            const body = {
+                request: {
+                    message: 'Deploy triggered by chat',
+                    config: {
+                        merge_mode: 'deep_merge',
+                        deploy: {
+                            space: `${environment}`
+                        }
+                    }
+                }
+            };
+            console.log(JSON.stringify(body));
+            console.log(TRAVIS_TOKEN);
+            const triggerDeployResponse = await axios({
+                method: 'post',
+                url,
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'Travis-API-Version': 3,
+                    Authorization: `token ${TRAVIS_TOKEN}`
+                },
+                body
+            })
+        } catch (err) {
+            console.log(`Error when triggering deploy build:`, err.message);
+        }
+
     }
 
     async retrieveBuildMetrics(appName){
