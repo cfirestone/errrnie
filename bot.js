@@ -29,6 +29,7 @@ const LuisModelUrl = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/
 
 // dialogs
 const releaseCardDialog = require('./dialogs/releaseCard');
+const buildCardDialog = require('./dialogs/buildCard');
 
 class EchoBot {
     /**
@@ -95,7 +96,7 @@ class EchoBot {
                 const topIntent = LuisRecognizer.topIntent(results);
                 const confidence = results.luisResult.topScoringIntent.score;
                 const appName = results.entities.appName;
-
+                console.log(`Matched intent '${topIntent}' with ${confidence}`);
                 switch (topIntent) {
                     case 'Latest_Release':
                         const releaseData = await this.retrieveLatestGithubRelease(appName);
@@ -107,6 +108,12 @@ class EchoBot {
                         const appHealth = await this.appHealth('https://google.com');
                         const message = `Application is ${appHealth === 200 ? 'healthy' : 'unhealthy'}`;                        
                         await turnContext.sendActivity(message);
+                        break;
+                    case 'LatestBuildMetrics':
+                        const buildData = await this.retrieveBuildMetrics(appName);
+                        const BuildCard = buildCardDialog(buildData);
+                        const buildCard = CardFactory.adaptiveCard(BuildCard);
+                        await turnContext.sendActivity({attachments: [buildCard]})
                         break;
                     default:
                         await turnContext.sendActivity('Please try again.');
@@ -127,6 +134,17 @@ class EchoBot {
         await this.conversationState.saveChanges(turnContext);
     }
 
+    async retrieveBuildMetrics(appName){
+        try{
+            appName = 'RubberDuckie';
+            const listBuildsResponse = await axios.get(`https://api.travis-ci.org/repos/firestones/${appName}/builds`);
+            const latestBuildNumber = listBuildsResponse.data[0].id;
+            const latestBuildResponse = await axios.get(`https://api.travis-ci.org/repos/firestones/${appName}/builds/${latestBuildNumber}`);
+            return latestBuildResponse.data;
+        } catch (err) {
+            console.log('error getting build metrics', err);
+        }
+    }
     async retrieveLatestGithubRelease(repositoryName) {
         const owner = 'firestones';
         const gh = new GitHub();
