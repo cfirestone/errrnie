@@ -99,12 +99,19 @@ class EchoBot {
                 const topIntent = LuisRecognizer.topIntent(results);
                 const confidence = results.luisResult.topScoringIntent.score;
                 const appName = results.entities.appName;
-                const env = results.entities.environment;
+                let env = results.entities.environment;
+                env  = (env == 'dev' || env == 'development' || env == 'develop' ) ?
+                    'development' : 'production';
+        
+                const targetUrl = (env == 'development') ?
+                    'https://rubberduckie-agile-panther.cfapps.io' :
+                 'https://rubberduckie-busy-shark.cfapps.io';
+
                 console.log(env);
+                console.log(targetUrl);
                 console.log(`Matched intent '${topIntent}' with ${confidence}`);
                 switch (topIntent) {
                     case 'DeployAppToEnv':
-                        
                         const version = results.entities.appVersion || `latest` ;
                         await turnContext.sendActivity(`Attempting to deploy ${appName}@${version} to ${env}...`)
                         const deployData = await this.triggerDeploy(appName, version, env);
@@ -127,7 +134,7 @@ class EchoBot {
                         await turnContext.sendActivity({attachments: [buildCard]})
                         break;
                     case 'AppVersion':
-                        const versionData = await this.retrieveRunningAppVersion(appName, env);
+                        const versionData = await this.retrieveRunningAppVersion(appName, env, targetUrl);
                         await turnContext.sendActivity(`${appName} is running ${versionData.version} at ${versionData.runningUrl}`);
                         break;
                     default:
@@ -149,13 +156,11 @@ class EchoBot {
         await this.conversationState.saveChanges(turnContext);
     }
 
-    async retrieveRunningAppVersion(appName, environment) {
+    async retrieveRunningAppVersion(appName, environment, targetUrl) {
         environment  = (environment == 'dev' || environment == 'development' || environment == 'develop' ) ?
             'development' : 'production';
         
-        const runningUrl = (environment === 'development') ?
-            'https://rubberduckie-agile-panther.cfapps.io/version' :
-            'https://rubberduckie-busy-shark.cfapps.io/version';
+        const runningUrl = `${targetUrl}/version`;
         console.log(environment, runningUrl);
         const versionResponse = await axios.get(runningUrl);
         console.log(versionResponse.data);
